@@ -27,4 +27,12 @@ head(dfsort)
 
 t.test(Income2005 ~ Educ, data = dfsort, alternative="greater", var.equal = FALSE, paired=FALSE, conf.level = .95,)
 
+#5
+df <- read.csv(file = "~/MSDS6371/autism.csv", header = TRUE, sep = ",")
+head(df)
+class(df$Before) = "numeric"
+class(df$After) = "numeric"
+#wilcoxon signed rank test
+wilcox.test(df$After, df$Before, paired = TRUE, alternative = "less")
+
 
