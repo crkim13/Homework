@@ -82,3 +82,9 @@ write.csv(major_count, "majorfreqdata.csv", row.names=FALSE)
 * In one (or more) of the nested directories, post your RMarkdown script, HTML file, and data from ‘fivethirtyeight.’  Make sure that in your README or elsewhere that you credit fivethirtyeight in some way.
 
 * In your RMarkdown script, please provide the link to this GitHub so the grader can see it.
+```{r 3, echo=TRUE}
+#general Homework repo for my class (contains HW4)
+#https://github.com/crkim13/Homework
+#link for folder that goes directly to HW4
+#https://github.com/crkim13/Homework/tree/master/MSDS6306
+```
