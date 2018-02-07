@@ -1,0 +1,38 @@
+---
+title: 'Assignment #4'
+author: "Cho Kim"
+date: "February 7, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+#### FiveThirtyEight Data (30 points): Navigate on GitHub to https://github.com/rudeboybert/fivethirtyeight and read README.md. Seriously, it will include everything you need. 
+
+* Install the fivethirtyeight package.
+* In the listing of Data sets in package ‘fivethirtyeight,’ assign the eighteenth data set to an object ‘df.’
+
+```{r 1, echo=TRUE}
+#install.packages("devtools")
+#install.packages("fivethirtyeight")
+library(fivethirtyeight)
+df <- data.frame(college_recent_grads)
+```
+
+* Use a more detailed list of the data sets to write out the URL in a comment to the related news story.
+```{r 1 link, echo=TRUE}
+vignette("fivethirtyeight", package = "fivethirtyeight")
+#http://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/
+#FiveThirtyEight's guide to picking a college major.
+```
+
+* Using R command(s), give the dimensions and column names of this data frame.
+```{r 1 dim, echo=TRUE}
+dim(df)
+str(df)
+colnames(df)
+```
