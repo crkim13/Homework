@@ -130,5 +130,15 @@ write.csv(subset,"top10girlnames.csv", row.names = FALSE)
 Upload to GitHub (10 points): Push at minimum your RMarkdown for this homework assignment and a Codebook to one of your GitHub repositories (you might place this in a Homework repo like last week).  The Codebook should contain a short definition of each object you create, and if creating multiple files, which file it is contained in.  You are welcome and encouraged to add other files - just make sure you have a description and directions that are helpful for the grader.
 
 ```{r 4, echo=TRUE}
+# git add MSDS6306/CKim_HW5.Rmd
+# git add MSDS6306/top10girlnames.csv
+# git add MSDS6306/CKim_HW5.html
+# git add MSDS6306/yob2015.txt
+# git add MSDS6306/yob2016.txt
+
+# git commit -m "commit completed hw to git"
+# git push origin master
 
 ```
+
+[https://github.com/crkim13/Homework/tree/master/MSDS6306](https://github.com/crkim13/Homework/tree/master/MSDS6306)
