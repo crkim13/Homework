@@ -1,0 +1,68 @@
+---
+title: "Assignment #9"
+author: "Cho Kim MSDS 6303-401"
+date: "March 20, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## 1. Harry Potter Cast
+
+#### Part A
+
+In the IMDB, there are listings of full cast members for movies. Navigate to [http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1](http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1) .
+
+#### Part B
+
+Scrape the page with any R package that makes things easy for you. Of particular interest is the table of the Cast in order of crediting. Please scrape this table (you might have to fish it out of several of the tables from the page) and make it a data.frame() of the Cast in your R environment
+
+#### Part C
+
+Clean up the table
+
+* It should not have blank observations or rows, a row that should be column names, or just '…'
+* It should have intuitive column names (ideally 2 to start – Actor and Character)
+* In the film, Mr. Warwick plays two characters, which makes his row look a little weird. Please replace his character column with just "Griphook / Professor Filius Flitwick" to make it look better.
+* One row might result in "Rest of cast listed alphabetically" – remove this observation.
+
+```{r 1bc, echo=TRUE}
+
+library(rvest)
+
+harrypotter <- read_html("http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1")
+
+cast <- (harrypotter %>%
+  html_nodes("#fullcredits_content .itemprop span") %>%
+  html_text())
+
+character <- (harrypotter %>%
+                 html_nodes("#fullcredits_content .character div") %>%
+                 html_text() %>%
+              gsub("^\\s+|\\s+$", "", .) %>%
+              gsub("\n", "", .) %>%
+              gsub("\\s+", " ", .)
+              )
+
+hp <- data.frame(cast, character)
+names(hp) <- c("Actor", "Character")
+```
+
+#### Part D
+
+Split the Actor's name into two columns: FirstName and Surname. Keep in mind that some actors/actresses have middle names as well. Please make sure that the middle names are in the FirstName column, in addition to the first name (example: given the Actor Frank Jeffrey Stevenson, the FirstName column would say "Frank Jeffrey.")
+
+```{r 1d, echo=TRUE}
+
+library(tidyr)
+hp <- extract(hp, Actor, c("FirstName", "Surname"), "(.*)\\s(.*)")
+```
+
+#### Part E
+
+Present the first 10 rows of the data.frame() - It should have only FirstName, Surname, and Character columns.
+```{r 1e, echo=TRUE}
+
+head(hp, n=10)
+```
