@@ -1,6 +1,6 @@
 ---
 title: "Assignment #10"
-author: "Cho Kim MSDS 6303-401"
+author: "Cho Kim MSDS 6306-401"
 date: "March 21, 2018"
 output: html_document
 ---
@@ -24,7 +24,7 @@ This data set is a survey of every known healthcare facility that offers mental 
 Please create code which lists the State abbreviations without their counts, one abbreviation per State value. It does not have to in data frame format. A vector is fine.
 
 ```{r 1b, echo=TRUE}
-
+load(file="C:/Users/Cho/Documents/MSDS6306/MHSS2015/MHSS2015data.rda")
 unique(mh2015_puf$LST)
 ```
 
@@ -32,123 +32,88 @@ unique(mh2015_puf$LST)
 
 Filter the data.frame from 1A. We are only interested in the Veterans Administration (VA) medical centers in the mainland United States-create a listing of counts of these centers by state, including only mainland locations. Alaska, Hawaii, and U.S. territories should be omitted. DC, while not a state, is in the mainland, so it should remain included. Convert this to data.frame()
 
-```{r 1bc, echo=TRUE}
+```{r 1c, echo=TRUE}
 
-library(rvest)
+library(sqldf)
 
-harrypotter <- read_html("http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1")
+VAMConly <- sqldf("select * from mh2015_puf where FACILITYTYPE = 'Veterans Administration medical center (VAMC) or other VA health care facility'")
+#trim whitespace
+trim <- function (x) gsub("^\\s+|\\s+$", "", x) 
+VAMConly$LST <- trim(VAMConly$LST)
 
-cast <- (harrypotter %>%
-  html_nodes("#fullcredits_content .itemprop span") %>%
-  html_text())
+mainland <- sqldf("select * from VAMConly where LST not in ('AK', 'HI', 'AS', 'GU', 'PR', 'VI');")
 
-character <- (harrypotter %>%
-                 html_nodes("#fullcredits_content .character div") %>%
-                 html_text() %>%
-              gsub("^\\s+|\\s+$", "", .) %>%
-              gsub("\n", "", .) %>%
-              gsub("\\s+", " ", .)
-              )
-
-hp <- data.frame(cast, character)
-names(hp) <- c("Actor", "Character")
+library(dplyr)
+countList <- count(mainland, LST)
+names(countList) <- c("State", "n")
 ```
 
 #### Part D
 
-Split the Actor's name into two columns: FirstName and Surname. Keep in mind that some actors/actresses have middle names as well. Please make sure that the middle names are in the FirstName column, in addition to the first name (example: given the Actor Frank Jeffrey Stevenson, the FirstName column would say "Frank Jeffrey.")
+Create a ggplot barchart of this filtered data set. Vary the bar's colors by what State it has listed. Give it an appropriately professional title that is centered. Make sure you have informative axis labels. The State axis should be readable, not layered over each other. You're welcome to have a legend or not.
 
-```{r 1d, echo=TRUE}
+```{r 1d, echo=TRUE, fig.width = 10, fig.height=11}
+#make states a factor
+countList$State <- factor(countList$State, levels = countList$State)
 
-library(tidyr)
-hp <- extract(hp, Actor, c("FirstName", "Surname"), "(.*)\\s(.*)")
+library(ggplot2)
+p<-ggplot(data=countList, aes(x=State, y=n))+geom_bar(aes(fill=State), stat="identity") + theme(plot.title = element_text(hjust = 0.5)) + coord_flip() + scale_x_discrete(name="State", limits = rev(levels(countList$State)))
+p + labs(title = "Count of Veterans Administration (VA) Medical Centers in the mainland U.S. by State", x = "State", y = "# of VA medical centers")+theme(legend.position="none")
 ```
-
-#### Part E
-
-Present the first 10 rows of the data.frame() - It should have only FirstName, Surname, and Character columns.
-```{r 1e, echo=TRUE}
-
-head(hp, n=10)
-```
-
-## 2. SportsBall
+## 2. Cleaning and Bringing in New Features
 
 #### Part A
 
-On the ESPN website, there are statistics of each NBA player. Navigate to the San Antonio Spurs current statistics (likely [http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs](http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs)). You are interested in the **Shooting Statistics** table.
+This graph (1D) might be somewhat misleading, as bigger states may have more hospitals, but could be more sparsely located. Read statesize.csv into your R environment. This contains essentially a vector of square miles for each state. In trying to merge it with your data.frame() from 1C, you find that they don't match. Use paste() on your LST column in 1C to see what the matter is, and write what you observe in a comment.
+
+```{r 2a, echo=TRUE}
+
+statesize <- read.csv("C:/Users/Cho/Documents/MSDS6306/statesize.csv", sep=",")
+colnames(statesize)[3] <- "State"
+
+newdf <- merge(countList, statesize, by = 'State')
+paste(newdf$State)
+
+```
+
+The DC State abbreviation is missing after the merge. Since DC is not a state, there is no data in the statesize.csv file so the row was dropped in the merge process.
 
 #### Part B
-Scrape the page with an R package that makes things easy for you. There are a few tables on the page, so make sure you are targeting specifically the Shooting Statistics table. 
+
+Correct the problem with the LST column using any method in R that is programmatic and easily understandable. Once you have made these state abbreviations identical to statesize.csv's Abbrev column, merge the data.frame() from 1C and statesize.csv in order to add size information.
+
+```{r 2b, echo=TRUE}
+
+newdf <- merge(countList, statesize, by = 'State')
+# if the problem was with the LST column's trailing whitespace, this was corrected earlier in the problem.
+
+
+```
 
 #### Part C
-Clean up the table (You might get some warnings if you're working with tibbles)
 
-* You'll want to create an R data.frame() with one observation for each player. Make sure that you do not accidentally include blank rows, a row of column names, or the Totals row in the table as observations.
+Calculate a new variable in your combined data.frame() which indicates the VA hospitals per thousand square miles.
 
-* The column PLAYER has two variables of interest in it: the player's name and their position, denoted by 1-2 letters after their name. Split the cells into two columns, one with Name and the other Position.
+```{r 2c, echo=TRUE}
+newdf$VAper1000 <- newdf$n/(newdf$SqMiles/1000) 
 
-* Check the data type of all columns. Convert relevant columns to numeric. Check the data type of all columns again to confirm that they have changed!
-
-```{r 2abc, echo=TRUE}
-spurs <- read_html("http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs")
-
-spurs <-
-(spurs %>%
-  html_nodes("#my-players-table div td") %>%
-  html_text())
-spurs <- spurs[287:572] # Shooting Stats table only
-colnames <- spurs[1:16] # extract column names
-colnames <- colnames[2:16] #remove ShootingStats text
-
-spurs <- spurs[17:286] #delete column names from vector
-newlength <- length(spurs)-15
-spurs <- spurs [1:newlength]
-spursm <- matrix(spurs, nrow=length(spurs)/15, byrow = TRUE) #create matrix from spurs vector
-
-spursdf <- data.frame(spursm) #create data frame from spurs matrix
-colnames(spursdf) <- colnames #assign colnames to spurs data frame
-
-spursdf <- extract(spursdf, PLAYER, c("Name", "Position"), "(.*)\\,(.*)") # split player column into Name/Position
-str(spursdf)
-
-## begin converting columns to numeric ##
-spursdf$FGM <- as.numeric(levels(spursdf$FGM))[spursdf$FGM]
-spursdf$FGA <- as.numeric(levels(spursdf$FGA))[spursdf$FGA]
-spursdf$`FG%` <- as.numeric(levels(spursdf$`FG%`))[spursdf$`FG%`]
-spursdf$`3PM` <- as.numeric(levels(spursdf$`3PM`))[spursdf$`3PM`]
-spursdf$`3PA` <- as.numeric(levels(spursdf$`3PA`))[spursdf$`3PA`]
-spursdf$`3P%` <- as.numeric(levels(spursdf$`3P%`))[spursdf$`3P%`]
-spursdf$FTM <- as.numeric(levels(spursdf$FTM))[spursdf$FTM]
-spursdf$FTA <- as.numeric(levels(spursdf$FTA))[spursdf$FTA]
-spursdf$`FT%` <- as.numeric(levels(spursdf$`FT%`))[spursdf$`FT%`]
-spursdf$`2PM` <- as.numeric(levels(spursdf$`2PM`))[spursdf$`2PM`]
-spursdf$`2PA` <- as.numeric(levels(spursdf$`2PA`))[spursdf$`2PA`]
-spursdf$`2P%` <- as.numeric(levels(spursdf$`2P%`))[spursdf$`2P%`]
-spursdf$PPS <- as.numeric(levels(spursdf$PPS))[spursdf$PPS]
-spursdf$`AFG%` <- as.numeric(levels(spursdf$`AFG%`))[spursdf$`AFG%`]
-
-#check data type of all columns
-str(spursdf)
 ```
 
 #### Part D
-Create a colorful bar chart that shows the *Field Goals Percentage Per Game* for each person. It will be graded on the following criteria:
 
-* Informative title, centered
-* Relevant x and y axis labels (not simply variables names!)
-* Human-readable axes with no overlap (you might have to flip x and y to fix that). **Note**: You do not have to convert the decimal to a percentage
-* Color the columns by the team member's position (so, all PF's should have the same color, etc.)
+Create another ggplot which considers the VAs per square thousand miles, rather than just frequency.
 
-```{r 2d, echo=TRUE}
+* Make sure the State axis is readable, like before. Change the title and axes as appropriate.
 
-# convert Position to factor
-spursdf$Position <- as.factor(spursdf$Position)
+* Modify the ggplot syntax to make your bars in descending order (there are StackOverflow topics for this, and I have demonstrated how in Live Coding in prior classes).
 
-# order by FG%
-spursdf <- spursdf[order(spursdf$`FG%`),]
+* Color-code the bars based on Region (see the merged data.frame)-however, change the color scheme from the default. Any set of colors is fine, so long as it is readable.
 
-library(ggplot2)
-p<-ggplot(data=spursdf, aes(x=reorder(Name, `FG%`), y=`FG%`))+geom_bar(aes(fill=Position), stat="identity") + theme(plot.title = element_text(hjust = 0.5)) + coord_flip() 
-p + labs(title = "Field Goals Percentage Per Game by Each Player", x = "Player", y = "Field Goal % Per Game")
+* Keep the legend-you should have four regions and therefore four colors.
+
+```{r 2d, echo=TRUE, fig.width = 10, fig.height=11}
+p<-ggplot(data=newdf, aes(x=reorder(State, VAper1000), y=VAper1000))+geom_bar(aes(fill=Region), stat="identity") + theme(plot.title = element_text(hjust = 0.5)) + coord_flip() + scale_fill_brewer(palette="BuPu")
+p + labs(title = "VA Hospitals per thousand square miles", x = "State", y = "# of VA medical centers")
+
 ```
+ 
