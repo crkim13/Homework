@@ -60,11 +60,8 @@ you're looking at, execute the command in 'Examples' in the help document.
 
 ```{r 2a, echo=TRUE}
 
-statesize <- read.csv("C:/Users/Cho/Documents/MSDS6306/statesize.csv", sep=",")
-colnames(statesize)[3] <- "State"
-
-newdf <- merge(countList, statesize, by = 'State')
-paste(newdf$State)
+library(fpp2)
+help(maxtemp)
 
 ```
 
@@ -75,9 +72,8 @@ information or subset information we care about.
 
 ```{r 2b, echo=TRUE}
 
-newdf <- merge(countList, statesize, by = 'State')
-# if the problem was with the LST column's trailing whitespace, this was corrected earlier in the problem.
-
+max_temp <- maxtemp
+max_temp1990 <- window(maxtemp, 1990) 
 
 ```
 
@@ -91,8 +87,17 @@ through 2021, all on one axis. Find the AICc of this fitted model. You will use 
 information later.
 
 ```{r 2c, echo=TRUE}
-newdf$VAper1000 <- newdf$n/(newdf$SqMiles/1000) 
+library(forecast)
 
+#SES Forecast
+maxtempSES5 <- ses(max_temp1990, h=5, initial="optimal")
+plot(maxtempSES5, xlab="Year", ylab="Temp in Celsius")
+lines(fitted(maxtempSES5), col="blue")
+
+#find AICc
+maxTempModel <- maxtempSES5$model
+maxTempAICc <- maxTempModel$aicc
+maxTempAICc
 ```
 
 #### Part D
@@ -100,15 +105,31 @@ newdf$VAper1000 <- newdf$n/(newdf$SqMiles/1000)
 Now use a damped Holt's linear trend to also predict out five years. Make sure
 initial="optimal." As above, create a similar plot to 1C, but use the Holt fit instead.
 
-```{r 2d, echo=TRUE, fig.width = 10, fig.height=11}
-p<-ggplot(data=newdf, aes(x=reorder(State, VAper1000), y=VAper1000))+geom_bar(aes(fill=Region), stat="identity") + theme(plot.title = element_text(hjust = 0.5)) + coord_flip() + scale_fill_brewer(palette="BuPu")
-p + labs(title = "VA Hospitals per thousand square miles", x = "State", y = "# of VA medical centers")
-
+```{r 2d, echo=TRUE}
+max_tempHolt <- holt(max_temp1990, initial="optimal", h=5)
+plot(max_tempHolt, xlab="Year", ylab="Temp in Celsius")
+lines(fitted(max_tempHolt), col="blue")
 ```
 
 #### Part E
 
 Compare the AICc of the ses() and holt() models. Which model is better here?
+
+```{r 2e, echo=TRUE}
+
+#find AICc
+maxTempHoltModel <- max_tempHolt$model
+maxTempHoltAICc <- maxTempHoltModel$aicc
+
+#print Holt model AICc
+maxTempHoltAICc
+
+#print ses model AICc
+maxTempAICc 
+
+```
+
+The ses model AICc was slightly larger by .5 so the ses model may be better.
 
 ## 3. The Wands Choose the Wizard (40%)
 
@@ -118,15 +139,39 @@ Utilize the dygraphs library. Read in both Unit11TimeSeries_Ollivander and
 _Gregorovitch.csv as two different data frames. They do not have headers, so make
 sure you account for that. This is a time series of Wands sold over years.
 
+```{r 3a, echo=TRUE}
+library(dygraphs)
+
+Ollivander <- read.csv("Unit11TimeSeries_Ollivander.csv", header=FALSE, sep=",")
+names(Ollivander) <- c("Date", "Wands")
+
+Gregorovitch <- read.csv("Unit11TimeSeries_Gregorovitch.csv", header=FALSE, sep=",")
+names(Gregorovitch) <- c("Date", "Wands")
+```
 #### Part B
 
 You don't have your information in the proper format! In both data sets, you'll need to
 first convert the date-like variable to an actual Date class.
 
+```{r 3b, echo=TRUE}
+Ollivander$Date <- as.Date(Ollivander$Date, format='%m/%d/%Y')
+
+Gregorovitch$Date <- as.Date(Gregorovitch$Date, format='%m/%d/%Y')
+
+```
+
 #### Part C
 
 Use the library xts (and the xts() function in it) to make each data frame an xts object
 (effectively, a time series). You'll want to order.by the Date variable.
+
+```{r 3c, echo=TRUE}
+library(xts)
+
+OllivanderXTS <- xts(Ollivander, order.by = Ollivander$Date)
+
+GregorovitchXTS <- xts(Gregorovitch, order.by = Gregorovitch$Date)
+```
 
 #### Part D
 
@@ -148,3 +193,29 @@ Ollivander is a different color than Gregorovitch.
 and at-large: between 1995 to 1999.
 
 * Enable Highlighting on the graph, so mousing over a line bolds it.
+
+```{r 3d, echo=TRUE}
+#rereading the tables were the only way I could get the rangeSelector to work properly.
+
+Ollivander <- read.csv("Unit11TimeSeries_Ollivander.csv", header=FALSE)
+names(Ollivander) <- c("Date", "Wands")
+Ollivander$Date <- as.Date (Ollivander$Date, format="%m/%d/%Y")
+Ollivander <- xts(Ollivander$Wands, order.by=Ollivander$Date)
+
+Gregorovitch <- read.csv("Unit11TimeSeries_Gregorovitch.csv", header=FALSE, sep=",")
+names(Gregorovitch) <- c("Date", "Wands")
+Gregorovitch$Date <- as.Date (Gregorovitch$Date, format="%m/%d/%Y")
+Gregorovitch <- xts(Gregorovitch$Wands, order.by=Gregorovitch$Date)
+
+wands <- cbind(Ollivander, Gregorovitch)
+
+#Begin Dygraph
+dygraph(wands, main="Ollivander vs Gregorovitch Wand Sales", xlab = "Year", ylab = "# of Wands") %>%
+  dyOptions(colors = RColorBrewer::brewer.pal(3, "Set2"))%>%
+  dySeries(name="..1", label = "Ollivander")%>%
+  dySeries(name="..2", label = "Gregorovitch")%>%
+  dyRangeSelector() %>%
+  dyShading(from="1995-1-1", to="1999-1-1", color="black")%>%
+  dyHighlight(highlightCircleSize = 4, highlightSeriesBackgroundAlpha = .2, hideOnMouseOut = FALSE)
+
+```
